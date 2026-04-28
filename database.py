@@ -2,10 +2,21 @@ import sqlite3
 import pandas as pd
 from datetime import datetime, timedelta
 import random
+import os
+import streamlit as st
+
+def get_database_path():
+    """Get the appropriate database path for local or cloud deployment"""
+    # For Streamlit Cloud, use /mount/data/ which is writable
+    if os.path.exists('/mount/data'):
+        return '/mount/data/operation_dashboard.db'
+    else:
+        return 'operation_dashboard.db'
 
 def create_database():
     """Create SQLite database and tables for the operation dashboard"""
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     # Create daily_data table
@@ -43,7 +54,8 @@ def insert_sample_monthly_summary():
 
     Samples are tagged with year=9999 so they can be deleted safely without touching real data.
     """
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     sample_year = 9999
@@ -78,7 +90,8 @@ def insert_sample_monthly_summary():
 
 def remove_sample_monthly_summary():
     """Remove previously inserted sample monthly summary rows."""
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM monthly_summary WHERE year = 9999")
     conn.commit()
@@ -91,7 +104,8 @@ def upsert_monthly_summary_from_daily_data(year=None):
     - Writes results into monthly_summary for the selected year.
     - Does not touch removable sample rows (year=9999).
     """
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
 
     if year is None:
         year = datetime.now().year
@@ -147,7 +161,8 @@ def upsert_monthly_summary_from_daily_data(year=None):
 
 def insert_daily_data(date, lake_elevation, peak_load, generation, gate_opening):
     """Insert daily data into the database"""
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     cursor.execute('''
@@ -160,7 +175,8 @@ def insert_daily_data(date, lake_elevation, peak_load, generation, gate_opening)
 
 def insert_monthly_summary(month, year, max_lake_elevation, max_peak_load, avg_generation, total_generation):
     """Insert monthly summary into the database"""
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     cursor.execute('''
@@ -173,7 +189,8 @@ def insert_monthly_summary(month, year, max_lake_elevation, max_peak_load, avg_g
 
 def get_latest_data():
     """Get the latest daily data"""
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
     
     query = '''
         SELECT lake_elevation, peak_load, generation, gate_opening, date
@@ -191,7 +208,8 @@ def get_latest_data():
 
 def get_previous_data():
     """Get the previous day's data for comparison"""
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
     
     query = '''
         SELECT lake_elevation, peak_load, generation, gate_opening, date
@@ -212,7 +230,8 @@ def get_monthly_data(year=2025, include_samples=True):
 
     If include_samples is True, also includes removable sample rows (year=9999).
     """
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
 
     if include_samples:
         query = '''
@@ -248,7 +267,8 @@ def get_monthly_data(year=2025, include_samples=True):
 
 def get_april_daily_data():
     """Get daily data for April - gets latest entry per day"""
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
     
     query = '''
         SELECT d1.date, 
@@ -274,7 +294,8 @@ def get_april_daily_data():
 
 def get_daily_data_for_chart(days=30):
     """Get daily data for the last N days - gets latest entry per date"""
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
     
     query = '''
         SELECT d1.date, 
@@ -299,7 +320,8 @@ def get_daily_data_for_chart(days=30):
 
 def clear_all_data():
     """Clear all existing data from the database"""
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute('DELETE FROM daily_data')
     cursor.execute('DELETE FROM monthly_summary')
@@ -308,7 +330,8 @@ def clear_all_data():
 
 def remove_sample_daily_data():
     """Remove any sample daily data entries."""
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     # Remove any sample data that might have specific patterns
     cursor.execute("DELETE FROM daily_data WHERE date LIKE '9999-%'")
@@ -316,9 +339,19 @@ def remove_sample_daily_data():
     conn.commit()
     conn.close()
 
+def initialize_cloud_database():
+    """Initialize database with sample data for cloud deployment"""
+    # Create database and tables
+    create_database()
+    
+    # Insert sample data for demonstration
+    insert_sample_operational_data()
+    insert_sample_monthly_summary()
+
 def insert_sample_operational_data():
     """Insert realistic sample operational data for March and April 2025"""
-    conn = sqlite3.connect('operation_dashboard.db')
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     # Sample March 2025 data (realistic operational values)
